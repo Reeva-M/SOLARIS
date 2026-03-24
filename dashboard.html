@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Irrigation Dashboard</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8f5;
+      color: #222;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      width: 90%;
+      max-width: 900px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #2b7a4b;
+    }
+    .metrics {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .card {
+      flex: 1 1 40%;
+      background: #eaf7ee;
+      margin: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    #pump {
+      font-weight: bold;
+      font-size: 1.3em;
+      color: #2b7a4b;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🌿 Smart Irrigation Dashboard</h1>
+
+    <div class="metrics">
+      <div class="card">
+        <h3>Water Level (%)</h3>
+        <p id="water_level">--</p>
+      </div>
+
+      <div class="card">
+        <h3>Temperature (°C)</h3>
+        <p id="temperature">--</p>
+      </div>
+
+      <div class="card">
+        <h3>Humidity (%)</h3>
+        <p id="humidity">--</p>
+      </div>
+
+      <div class="card">
+        <h3>Water Temperature (°C)</h3>
+        <p id="water_temp">--</p>
+      </div>
+    </div>
+
+    <h3 style="text-align:center;">
+      Pump Status: <span id="pump">--</span>
+    </h3>
+
+    <canvas id="dataChart" width="800" height="400"></canvas>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('dataChart').getContext('2d');
+
+    const dataChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Water Level (%)',
+            data: [],
+            borderColor: '#2b7a4b',
+            fill: false
+          },
+          {
+            label: 'Temperature (°C)',
+            data: [],
+            borderColor: '#ff7b00',
+            fill: false
+          },
+          {
+            label: 'Humidity (%)',
+            data: [],
+            borderColor: '#0077b6',
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        animation: false
+      }
+    });
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/latest');
+        const data = await res.json();
+
+        document.getElementById('water_level').textContent =
+          data.water_level.toFixed(2);
+
+        document.getElementById('temperature').textContent =
+          data.temperature.toFixed(2);
+
+        document.getElementById('humidity').textContent =
+          data.humidity.toFixed(2);
+
+        document.getElementById('water_temp').textContent =
+          data.water_temperature.toFixed(2);
+
+        document.getElementById('pump').textContent =
+          data.pump_state === 1 ? 'ON 💧' : 'OFF 💤';
+
+        // Update chart
+        const timeLabel = new Date().toLocaleTimeString();
+        dataChart.data.labels.push(timeLabel);
+        dataChart.data.datasets[0].data.push(data.water_level);
+        dataChart.data.datasets[1].data.push(data.temperature);
+        dataChart.data.datasets[2].data.push(data.humidity);
+
+        if (dataChart.data.labels.length > 20) {
+          dataChart.data.labels.shift();
+          dataChart.data.datasets.forEach(ds => ds.data.shift());
+        }
+
+        dataChart.update();
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      }
+    }
+
+    // Fetch every 3 seconds
+    setInterval(fetchData, 3000);
+    fetchData();
+  </script>
+</body>
+</html>
